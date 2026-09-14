@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import toast from 'react-hot-toast';
 import { BookOpen, Calendar as CalendarIcon, Download, Users, Mail, BellRing, TrendingUp, CreditCard, BookCopy, Award, BookOpenCheck, Radio, CheckCircle2 } from 'lucide-react';
+import { getPersonalizedStudentProfile } from '../utils/studentDataHelper';
 import './Dashboard.css';
 
 function Dashboard() {
@@ -21,10 +22,31 @@ function Dashboard() {
     }
   })();
 
-  const studentName = storedUser.name || 'John';
-  const firstName = studentName.split(' ')[0];
-  const studentCourse = storedUser.major || storedUser.degree || 'B.Tech Computer Science';
-  const studentSemester = storedUser.semester || '4';
+  // Dynamically compute unique profile for THIS student
+  const profile = useMemo(() => {
+    return getPersonalizedStudentProfile(storedUser);
+  }, [storedUser.email, storedUser.name, storedUser.major, storedUser.semester, storedUser.rollNo]);
+
+  const [activeModal, setActiveModal] = useState(null);
+  
+  // Dynamic fees with local payment persistence
+  const [pendingFees, setPendingFees] = useState(() => {
+    const savedFee = localStorage.getItem(`fees_${profile.email}`);
+    return savedFee !== null ? Number(savedFee) : profile.pendingFees;
+  });
+
+  // Dynamic library books with local renewal persistence
+  const [libraryBooks, setLibraryBooks] = useState(() => {
+    const savedBooks = localStorage.getItem(`books_${profile.email}`);
+    return savedBooks ? JSON.parse(savedBooks) : profile.libraryBooks;
+  });
+
+  useEffect(() => {
+    const savedFee = localStorage.getItem(`fees_${profile.email}`);
+    setPendingFees(savedFee !== null ? Number(savedFee) : profile.pendingFees);
+    const savedBooks = localStorage.getItem(`books_${profile.email}`);
+    setLibraryBooks(savedBooks ? JSON.parse(savedBooks) : profile.libraryBooks);
+  }, [profile.email]);
 
   useEffect(() => {
     const hour = new Date().getHours();
@@ -33,61 +55,8 @@ function Dashboard() {
     else setGreeting('Good Evening');
   }, []);
 
-  // Dynamic Weekly Schedule
-  const weeklySchedule = {
-    // Sunday
-    0: [],
-    // Monday
-    1: [
-      { id: 1, subject: 'Advanced Mathematics', teacher: 'Mr. Robert Smith', time: '09:00 AM - 10:30 AM', isActive: true },
-      { id: 4, subject: 'English Literature', teacher: 'Dr. Jane Austen', time: '11:00 AM - 12:30 PM', isActive: false }
-    ],
-    // Tuesday
-    2: [
-      { id: 2, subject: 'Physics & Thermodynamics', teacher: 'Mrs. Sarah Davis', time: '09:00 AM - 11:00 AM', isActive: true },
-      { id: 3, subject: 'Computer Science 101', teacher: 'Dr. Alan Turing', time: '01:00 PM - 02:30 PM', isActive: false },
-      { id: 5, subject: 'World History', teacher: 'Prof. John Doe', time: '03:00 PM - 04:30 PM', isActive: false }
-    ],
-    // Wednesday
-    3: [
-      { id: 1, subject: 'Advanced Mathematics', teacher: 'Mr. Robert Smith', time: '10:00 AM - 11:30 AM', isActive: true },
-      { id: 3, subject: 'Computer Science 101', teacher: 'Dr. Alan Turing', time: '02:00 PM - 04:00 PM', isActive: false }
-    ],
-    // Thursday
-    4: [
-      { id: 4, subject: 'English Literature', teacher: 'Dr. Jane Austen', time: '09:00 AM - 10:30 AM', isActive: true },
-      { id: 2, subject: 'Physics & Thermodynamics', teacher: 'Mrs. Sarah Davis', time: '11:30 AM - 01:00 PM', isActive: false }
-    ],
-    // Friday
-    5: [
-      { id: 1, subject: 'Advanced Mathematics', teacher: 'Mr. Robert Smith', time: '09:00 AM - 10:00 AM', isActive: true },
-      { id: 5, subject: 'World History', teacher: 'Prof. John Doe', time: '10:30 AM - 12:00 PM', isActive: false },
-      { id: 3, subject: 'Computer Science 101', teacher: 'Dr. Alan Turing', time: '01:00 PM - 03:00 PM', isActive: false }
-    ],
-    // Saturday
-    6: [
-      { id: 6, subject: 'Extra Class: Web Development', teacher: 'Prof. John Doe', time: '10:00 AM - 12:00 PM', isActive: true }
-    ]
-  };
-
   const dayOfWeek = date.getDay();
-  const classes = weeklySchedule[dayOfWeek] || [];
-
-  // Mock data for attendance percentage
-  const attendanceData = [
-    { name: 'Math', attendance: 85 },
-    { name: 'Physics', attendance: 70 },
-    { name: 'CS 101', attendance: 95 },
-    { name: 'English', attendance: 60 },
-    { name: 'History', attendance: 88 },
-  ];
-
-  const [activeModal, setActiveModal] = useState(null);
-  const [pendingFees, setPendingFees] = useState(1250);
-  const [libraryBooks, setLibraryBooks] = useState([
-    { id: 1, title: 'Introduction to Algorithms (4th Ed)', due: 'Yesterday', isOverdue: true, renewed: false },
-    { id: 2, title: 'Physics Vol 2', due: 'Oct 20, 2026', isOverdue: false, renewed: false }
-  ]);
+  const classes = profile.weeklySchedule[dayOfWeek] || [];
 
   // Helper to trigger a real browser download
   const triggerDownload = (fileName, content) => {
@@ -105,28 +74,56 @@ function Dashboard() {
     setTimeout(() => {
       toast.success(`Payment of $${pendingFees.toLocaleString()} successful!`, { id: toastId });
       setPendingFees(0);
+      localStorage.setItem(`fees_${profile.email}`, '0');
       setActiveModal(null);
-    }, 2000);
+    }, 1500);
   };
 
   const handleRenewBook = (bookId, bookName) => {
-    setLibraryBooks(prev => prev.map(book => {
+    const updated = libraryBooks.map(book => {
       if (book.id === bookId) {
         return { ...book, due: 'In 14 Days', isOverdue: false, renewed: true };
       }
       return book;
-    }));
+    });
+    setLibraryBooks(updated);
+    localStorage.setItem(`books_${profile.email}`, JSON.stringify(updated));
     toast.success(`"${bookName}" has been successfully renewed for 14 days.`);
   };
 
   const handleDownloadTranscript = () => {
     const toastId = toast.loading('Generating official transcript...');
-    const enrollment = storedUser.enrollmentNo || 'ENR-9845321';
     setTimeout(() => {
       toast.success('Transcript downloaded successfully!', { id: toastId });
+      
+      let semesterDetailsText = '';
+      profile.pastSemesters.forEach(sem => {
+        semesterDetailsText += `\n-- Semester ${sem.semNumber} (SGPA: ${sem.sgpa}) --\n`;
+        sem.courses.forEach(c => {
+          semesterDetailsText += `${c.name}: ${c.grade}\n`;
+        });
+      });
+
       triggerDownload(
-        `Official_Transcript_${studentName.replace(/\s+/g, '_')}.txt`, 
-        `OFFICIAL TRANSCRIPT\nName: ${studentName}\nEnrollment: ${enrollment}\nCourse: ${studentCourse}\n\nCumulative CGPA: 8.74\nOverall Percentage: 83.5%\n\n-- Semester 3 --\nData Structures: A+ (92)\nDiscrete Math: A (88)\nLogic Design: B+ (78)\nWeb Dev: A (86)\nSGPA: 8.90\n\n-- Semester 2 --\nCalculus II: A (87)\nPhysics II: B+ (79)\nOOP (C++): A (89)\nCommunication: A- (82)\nSGPA: 8.65\n\n-- Semester 1 --\nCalculus I: A- (81)\nPhysics I: B+ (76)\nIntro to CS: A (88)\nEngineering Draw: A- (80)\nSGPA: 8.50`
+        `Official_Transcript_${profile.name.replace(/\s+/g, '_')}.txt`, 
+        `=====================================================\n` +
+        `             OFFICIAL ACADEMIC TRANSCRIPT            \n` +
+        `=====================================================\n` +
+        `Student Name   : ${profile.name}\n` +
+        `Enrollment No  : ${profile.enrollmentNo}\n` +
+        `Roll Number    : ${profile.rollNo}\n` +
+        `Degree / Course: ${profile.major}\n` +
+        `Current Term   : Semester ${profile.semester}\n` +
+        `Cumulative CGPA: ${profile.cgpa} / 10.0\n` +
+        `Overall Percent: ${profile.percentage}%\n` +
+        `Attendance Rate: ${profile.overallAttendance}%\n` +
+        `Status         : GOOD STANDING\n` +
+        `-----------------------------------------------------\n` +
+        `ACADEMIC RECORD BREAKDOWN:` +
+        semesterDetailsText +
+        `\n=====================================================\n` +
+        `Issued on: ${new Date().toLocaleDateString('en-US', { dateStyle: 'full' })}\n` +
+        `Office of Academic Records & Examinations\n`
       );
     }, 1500);
   };
@@ -142,8 +139,8 @@ function Dashboard() {
   return (
     <div className="dashboard-container">
       <div className="dashboard-header">
-        <h2>{greeting}, {firstName}! 👋</h2>
-        <p>{studentCourse} | Semester {studentSemester}</p>
+        <h2>{greeting}, {profile.firstName}! 👋</h2>
+        <p>{profile.major} | Semester {profile.semester} • Roll No: {profile.rollNo}</p>
       </div>
 
       {/* Top Stat Cards */}
@@ -152,14 +149,14 @@ function Dashboard() {
           <div className="stat-icon purple"><TrendingUp size={24} /></div>
           <div className="stat-info">
             <p>Current CGPA</p>
-            <h3>8.74</h3>
+            <h3>{profile.cgpa}</h3>
           </div>
         </div>
         <div className="stat-card clickable" onClick={() => setActiveModal('attendance_details')} style={{cursor: 'pointer'}}>
           <div className="stat-icon green"><CalendarIcon size={24} /></div>
           <div className="stat-info">
             <p>Overall Attendance</p>
-            <h3>79.6%</h3>
+            <h3>{profile.overallAttendance}%</h3>
           </div>
         </div>
         <div className="stat-card clickable" onClick={() => setActiveModal('fees')} style={{cursor: 'pointer'}}>
@@ -184,22 +181,28 @@ function Dashboard() {
           <div className="dashboard-section">
             <h3 className="section-title"><CalendarIcon size={22}/> Schedule for {headerDateStr}</h3>
             <div className="calendar-view">
-              {classes.map((cls) => (
-                <div 
-                  key={cls.id} 
-                  className={`class-card ${isToday && cls.isActive ? 'active-class' : ''}`}
-                  onClick={() => navigate(`/class/${cls.id}`, { state: { selectedDate: date.toISOString() } })}
-                >
-                  <div className="class-time">{cls.time}</div>
-                  <div className="class-details-info">
-                    <h3>{cls.subject}</h3>
-                    <p>👨‍🏫 {cls.teacher}</p>
+              {classes.length > 0 ? (
+                classes.map((cls) => (
+                  <div 
+                    key={cls.id} 
+                    className={`class-card ${isToday && cls.isActive ? 'active-class' : ''}`}
+                    onClick={() => navigate(`/class/${cls.id}`, { state: { selectedDate: date.toISOString(), subject: cls.subject, teacher: cls.teacher } })}
+                  >
+                    <div className="class-time">{cls.time}</div>
+                    <div className="class-details-info">
+                      <h3>{cls.subject}</h3>
+                      <p>👨‍🏫 {cls.teacher}</p>
+                    </div>
+                    <div className="class-action">
+                      <button className="view-btn">{isToday ? "View Class" : "View Notes"}</button>
+                    </div>
                   </div>
-                  <div className="class-action">
-                    <button className="view-btn">{isToday ? "View Class" : "View Notes"}</button>
-                  </div>
+                ))
+              ) : (
+                <div style={{ padding: '25px', textAlign: 'center', color: '#94a3b8' }}>
+                  No scheduled lectures on this day. Take time for self-study and assignments!
                 </div>
-              ))}
+              )}
             </div>
           </div>
 
@@ -222,7 +225,7 @@ function Dashboard() {
                 const futureDate = new Date();
                 futureDate.setDate(futureDate.getDate() + offset);
                 const dayIndex = futureDate.getDay();
-                const dayClasses = weeklySchedule[dayIndex] || [];
+                const dayClasses = profile.weeklySchedule[dayIndex] || [];
                 
                 return (
                   <div key={offset} className="upcoming-day-card">
@@ -251,16 +254,21 @@ function Dashboard() {
         {/* Right Column: Attendance Graph & Actions */}
         <div className="dashboard-column">
           <div className="dashboard-section performance-section">
-            <h3 className="section-title"><BarChart size={22}/> Attendance Performance</h3>
+            <h3 className="section-title"><BarChart size={22}/> Attendance Performance ({profile.major.split(' ')[0]})</h3>
             <div className="chart-container">
               <ResponsiveContainer width="100%" height={250}>
-                <BarChart data={attendanceData} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
+                <BarChart data={profile.attendanceData} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
                   <XAxis dataKey="name" stroke="#94a3b8" />
-                  <YAxis stroke="#94a3b8" />
+                  <YAxis stroke="#94a3b8" domain={[0, 100]} />
                   <Tooltip 
                     contentStyle={{ backgroundColor: '#1e293b', border: 'none', borderRadius: '10px', color: '#fff' }}
                     itemStyle={{ color: '#818cf8' }}
+                    formatter={(value) => [`${value}% Attendance`, 'Rate']}
+                    labelFormatter={(label) => {
+                      const item = profile.attendanceData.find(d => d.name === label);
+                      return item ? item.fullName : label;
+                    }}
                     cursor={{fill: 'rgba(255,255,255,0.05)'}}
                   />
                   <Bar dataKey="attendance" fill="url(#colorUv)" radius={[5, 5, 0, 0]} />
@@ -280,38 +288,27 @@ function Dashboard() {
             <div className="dashboard-section upcoming-deadlines">
                <h3 className="section-title"><BellRing size={20}/> Deadlines</h3>
                <ul className="deadline-list">
-                 <li onClick={() => navigate('/class/1', { state: { activeTab: 'assignments', selectedDate: new Date().toISOString() } })} style={{cursor: 'pointer'}} title="Go to Math assignments">
-                   <span className="deadline-title">Math Assignment 4</span>
-                   <span className="deadline-date urgent">Tomorrow, 11:59 PM</span>
-                 </li>
-                 <li onClick={() => navigate('/class/2', { state: { activeTab: 'assignments', selectedDate: new Date().toISOString() } })} style={{cursor: 'pointer'}} title="Go to Physics assignments">
-                   <span className="deadline-title">Physics Lab Report</span>
-                   <span className="deadline-date">Oct 15, 2026</span>
-                 </li>
-                 <li onClick={() => toast.success("Redirecting to Registration Portal...")} style={{cursor: 'pointer'}} title="Go to registration">
-                   <span className="deadline-title">Semester Registration</span>
-                   <span className="deadline-date">Oct 20, 2026</span>
-                 </li>
+                 {profile.deadlines.map((dl) => (
+                   <li key={dl.id} onClick={() => navigate(`/class/${dl.id}`, { state: { activeTab: 'assignments', selectedDate: new Date().toISOString() } })} style={{cursor: 'pointer'}} title={`Go to ${dl.title}`}>
+                     <span className="deadline-title">{dl.title}</span>
+                     <span className={`deadline-date ${dl.urgent ? 'urgent' : ''}`}>{dl.date}</span>
+                   </li>
+                 ))}
                </ul>
             </div>
             
             <div className="dashboard-section recent-grades">
                <h3 className="section-title"><Award size={20}/> Recent Grades</h3>
                <div className="grades-list">
-                 <div className="grade-item">
-                   <div className="grade-info">
-                     <h4>Midterm Exam</h4>
-                     <p>Physics & Thermo</p>
+                 {profile.grades.map((gr, idx) => (
+                   <div key={idx} className="grade-item">
+                     <div className="grade-info">
+                       <h4>{gr.title}</h4>
+                       <p>{gr.subject}</p>
+                     </div>
+                     <div className={`grade-score ${gr.score.startsWith('A') ? 'a-grade' : 'b-grade'}`}>{gr.score}</div>
                    </div>
-                   <div className="grade-score a-grade">A-</div>
-                 </div>
-                 <div className="grade-item">
-                   <div className="grade-info">
-                     <h4>Quiz 3</h4>
-                     <p>Computer Science</p>
-                   </div>
-                   <div className="grade-score b-grade">B+</div>
-                 </div>
+                 ))}
                </div>
                
                <div className="action-buttons mt-4" style={{marginTop: '20px'}}>
@@ -329,33 +326,17 @@ function Dashboard() {
         <div className="dashboard-section course-progress-section">
           <h3 className="section-title"><BookOpenCheck size={22}/> Syllabus Progress</h3>
           <div className="progress-list">
-            <div className="progress-item">
-              <div className="progress-header">
-                <span>Advanced Mathematics</span>
-                <span>75%</span>
+            {profile.progressList.map((prog, idx) => (
+              <div key={idx} className="progress-item">
+                <div className="progress-header">
+                  <span>{prog.subject}</span>
+                  <span>{prog.percent}%</span>
+                </div>
+                <div className="progress-bar-bg">
+                  <div className={`progress-bar-fill ${prog.color}`} style={{width: `${prog.percent}%`}}></div>
+                </div>
               </div>
-              <div className="progress-bar-bg">
-                <div className="progress-bar-fill purple" style={{width: '75%'}}></div>
-              </div>
-            </div>
-            <div className="progress-item">
-              <div className="progress-header">
-                <span>Physics & Thermodynamics</span>
-                <span>45%</span>
-              </div>
-              <div className="progress-bar-bg">
-                <div className="progress-bar-fill blue" style={{width: '45%'}}></div>
-              </div>
-            </div>
-            <div className="progress-item">
-              <div className="progress-header">
-                <span>Computer Science 101</span>
-                <span>90%</span>
-              </div>
-              <div className="progress-bar-bg">
-                <div className="progress-bar-fill green" style={{width: '90%'}}></div>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
 
@@ -368,7 +349,7 @@ function Dashboard() {
                 <span className="e-day">12</span>
               </div>
               <div className="event-details">
-                <h4>Tech Symposium 2026</h4>
+                <h4>{profile.major.split(' ')[0]} Academic Colloquium 2026</h4>
                 <p>Main Auditorium • 10:00 AM</p>
               </div>
             </div>
@@ -378,7 +359,7 @@ function Dashboard() {
                 <span className="e-day">18</span>
               </div>
               <div className="event-details">
-                <h4>Hackathon Registration Ends</h4>
+                <h4>Research Project Submissions</h4>
                 <p>Online Portal • 11:59 PM</p>
               </div>
             </div>
@@ -398,10 +379,10 @@ function Dashboard() {
               {pendingFees > 0 ? (
                 <>
                   <div className="fee-breakdown">
-                    <div className="fee-row"><span>Tuition Fee (Sem 4)</span> <span>$1,000</span></div>
-                    <div className="fee-row"><span>Lab Charges</span> <span>$200</span></div>
-                    <div className="fee-row"><span>Library Fine</span> <span>$50</span></div>
-                    <div className="fee-row total"><span>Total Pending</span> <span>${pendingFees.toLocaleString()}</span></div>
+                    <div className="fee-row"><span>Tuition Fee (Sem {profile.semester})</span> <span>${Math.round(pendingFees * 0.8).toLocaleString()}</span></div>
+                    <div className="fee-row"><span>Lab & Resource Charges</span> <span>${Math.round(pendingFees * 0.15).toLocaleString()}</span></div>
+                    <div className="fee-row"><span>Library Fine / Processing</span> <span>${Math.round(pendingFees * 0.05).toLocaleString()}</span></div>
+                    <div className="fee-row total"><span>Total Pending Balance</span> <span>${pendingFees.toLocaleString()}</span></div>
                   </div>
                   <button className="modal-primary-btn" onClick={handlePayFees}>
                     <CreditCard size={18} /> Pay via Credit/Debit Card
@@ -410,8 +391,8 @@ function Dashboard() {
               ) : (
                 <div style={{textAlign: 'center', padding: '30px 0'}}>
                   <CheckCircle2 size={48} color="#34d399" style={{marginBottom: '15px'}} />
-                  <h3 style={{color: '#e2e8f0', margin: 0}}>All Fees Paid!</h3>
-                  <p style={{color: '#94a3b8', marginTop: '10px'}}>You have no pending balances for this semester.</p>
+                  <h3 style={{color: '#e2e8f0', margin: 0}}>All Fees Cleared!</h3>
+                  <p style={{color: '#94a3b8', marginTop: '10px'}}>You have $0 balance for Semester {profile.semester}.</p>
                 </div>
               )}
             </div>
@@ -427,7 +408,7 @@ function Dashboard() {
               <button className="close-btn" onClick={() => setActiveModal(null)}>×</button>
             </div>
             <div className="modal-body">
-              <p style={{color: '#94a3b8', marginBottom: '15px'}}>Currently Borrowed Books:</p>
+              <p style={{color: '#94a3b8', marginBottom: '15px'}}>Curated Resources for {profile.major}:</p>
               <div className="book-list">
                 {libraryBooks.map(book => (
                   <div key={book.id} className="book-item">
@@ -455,35 +436,34 @@ function Dashboard() {
         <div className="modal-overlay" onClick={() => setActiveModal(null)}>
           <div className="modal-content" onClick={e => e.stopPropagation()} style={{maxWidth: '500px'}}>
             <div className="modal-header">
-              <h3>✅ Overall Attendance Details</h3>
+              <h3>✅ Attendance Analytics ({profile.name})</h3>
               <button className="close-btn" onClick={() => setActiveModal(null)}>×</button>
             </div>
             <div className="modal-body">
               <div style={{display: 'flex', gap: '15px', marginBottom: '25px'}}>
                 <div style={{flex: 1, background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)', padding: '15px', borderRadius: '12px', textAlign: 'center'}}>
-                  <h4 style={{color: '#34d399', margin: '0 0 5px 0', fontSize: '1.5rem'}}>79.6%</h4>
-                  <p style={{color: '#94a3b8', margin: 0, fontSize: '0.85rem'}}>Total Present</p>
+                  <h4 style={{color: '#34d399', margin: '0 0 5px 0', fontSize: '1.5rem'}}>{profile.overallAttendance}%</h4>
+                  <p style={{color: '#94a3b8', margin: 0, fontSize: '0.85rem'}}>Overall Present</p>
                 </div>
                 <div style={{flex: 1, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', padding: '15px', borderRadius: '12px', textAlign: 'center'}}>
-                  <h4 style={{color: '#f87171', margin: '0 0 5px 0', fontSize: '1.5rem'}}>20.4%</h4>
+                  <h4 style={{color: '#f87171', margin: '0 0 5px 0', fontSize: '1.5rem'}}>{(100 - profile.overallAttendance).toFixed(1)}%</h4>
                   <p style={{color: '#94a3b8', margin: 0, fontSize: '0.85rem'}}>Total Missed</p>
                 </div>
               </div>
 
               <h4 style={{color: '#e2e8f0', marginBottom: '15px'}}>Subject-wise Breakdown</h4>
               <div style={{display: 'flex', flexDirection: 'column', gap: '12px'}}>
-                {attendanceData.map(subject => {
-                  // Mock total classes calculation based on attendance
-                  const totalClasses = 30;
+                {profile.attendanceData.map(subject => {
+                  const totalClasses = 32;
                   const attendedClasses = Math.round((subject.attendance / 100) * totalClasses);
                   const missedClasses = totalClasses - attendedClasses;
                   
                   return (
-                    <div key={subject.name} style={{background: 'rgba(0,0,0,0.2)', padding: '12px 15px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+                    <div key={subject.id || subject.name} style={{background: 'rgba(0,0,0,0.2)', padding: '12px 15px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
                       <div>
-                        <h4 style={{margin: '0 0 4px 0', color: '#e2e8f0'}}>{subject.name}</h4>
+                        <h4 style={{margin: '0 0 4px 0', color: '#e2e8f0'}}>{subject.fullName || subject.name}</h4>
                         <p style={{margin: 0, fontSize: '0.8rem', color: '#94a3b8'}}>
-                          <span style={{color: '#34d399'}}>{attendedClasses} Taken</span> • <span style={{color: '#f87171'}}>{missedClasses} Missed</span>
+                          <span style={{color: '#34d399'}}>{attendedClasses} Attended</span> • <span style={{color: '#f87171'}}>{missedClasses} Missed</span>
                         </p>
                       </div>
                       <div style={{fontWeight: 'bold', color: subject.attendance >= 75 ? '#34d399' : '#fbbf24'}}>
@@ -502,65 +482,41 @@ function Dashboard() {
         <div className="modal-overlay" onClick={() => setActiveModal(null)}>
           <div className="modal-content cgpa-modal-content" onClick={e => e.stopPropagation()} style={{maxWidth: '600px'}}>
             <div className="modal-header">
-              <h3>📈 Academic History</h3>
+              <h3>📈 Academic History ({profile.name})</h3>
               <button className="close-btn" onClick={() => setActiveModal(null)}>×</button>
             </div>
             <div className="modal-body">
               <div className="cgpa-overview" style={{display: 'flex', gap: '20px', marginBottom: '25px', padding: '20px', background: 'linear-gradient(135deg, rgba(99,102,241,0.1) 0%, rgba(139,92,246,0.1) 100%)', borderRadius: '15px', border: '1px solid rgba(99,102,241,0.2)'}}>
                 <div style={{flex: 1, textAlign: 'center'}}>
                   <p style={{color: '#94a3b8', margin: '0 0 5px 0'}}>Cumulative CGPA</p>
-                  <h2 style={{color: '#fff', fontSize: '2.5rem', margin: 0}}>8.74</h2>
+                  <h2 style={{color: '#fff', fontSize: '2.5rem', margin: 0}}>{profile.cgpa}</h2>
                 </div>
                 <div style={{width: '1px', background: 'rgba(255,255,255,0.1)'}}></div>
                 <div style={{flex: 1, textAlign: 'center'}}>
                   <p style={{color: '#94a3b8', margin: '0 0 5px 0'}}>Overall Percentage</p>
-                  <h2 style={{color: '#fff', fontSize: '2.5rem', margin: 0}}>83.5%</h2>
+                  <h2 style={{color: '#fff', fontSize: '2.5rem', margin: 0}}>{profile.percentage}%</h2>
                 </div>
               </div>
 
-              <h4 style={{color: '#e2e8f0', marginBottom: '15px'}}>Past Semester Reports</h4>
+              <h4 style={{color: '#e2e8f0', marginBottom: '15px'}}>Past Semester Breakdown</h4>
               
               <div className="semester-list" style={{display: 'flex', flexDirection: 'column', gap: '15px', maxHeight: '300px', overflowY: 'auto', paddingRight: '10px'}}>
-                
-                <div className="semester-card" style={{background: 'rgba(0,0,0,0.2)', padding: '15px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)'}}>
-                  <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '10px', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '10px'}}>
-                    <h4 style={{margin: 0, color: '#818cf8'}}>Semester 3</h4>
-                    <span style={{color: '#34d399', fontWeight: 'bold'}}>SGPA: 8.90 (85%)</span>
+                {profile.pastSemesters.map(sem => (
+                  <div key={sem.semNumber} className="semester-card" style={{background: 'rgba(0,0,0,0.2)', padding: '15px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)'}}>
+                    <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '10px', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '10px'}}>
+                      <h4 style={{margin: 0, color: '#818cf8'}}>Semester {sem.semNumber}</h4>
+                      <span style={{color: '#34d399', fontWeight: 'bold'}}>SGPA: {sem.sgpa} ({sem.percentage}%)</span>
+                    </div>
+                    <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '0.9rem', color: '#cbd5e1'}}>
+                      {sem.courses.map((course, cIdx) => (
+                        <div key={cIdx} style={{display: 'flex', justifyContent: 'space-between'}}>
+                          <span>{course.name}</span>
+                          <span>{course.grade}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                  <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '0.9rem', color: '#cbd5e1'}}>
-                    <div style={{display: 'flex', justifyContent: 'space-between'}}><span>Data Structures</span> <span>A+ (92)</span></div>
-                    <div style={{display: 'flex', justifyContent: 'space-between'}}><span>Discrete Math</span> <span>A (88)</span></div>
-                    <div style={{display: 'flex', justifyContent: 'space-between'}}><span>Logic Design</span> <span>B+ (78)</span></div>
-                    <div style={{display: 'flex', justifyContent: 'space-between'}}><span>Web Dev</span> <span>A (86)</span></div>
-                  </div>
-                </div>
-
-                <div className="semester-card" style={{background: 'rgba(0,0,0,0.2)', padding: '15px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)'}}>
-                  <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '10px', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '10px'}}>
-                    <h4 style={{margin: 0, color: '#818cf8'}}>Semester 2</h4>
-                    <span style={{color: '#34d399', fontWeight: 'bold'}}>SGPA: 8.65 (82%)</span>
-                  </div>
-                  <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '0.9rem', color: '#cbd5e1'}}>
-                    <div style={{display: 'flex', justifyContent: 'space-between'}}><span>Calculus II</span> <span>A (87)</span></div>
-                    <div style={{display: 'flex', justifyContent: 'space-between'}}><span>Physics II</span> <span>B+ (79)</span></div>
-                    <div style={{display: 'flex', justifyContent: 'space-between'}}><span>OOP (C++)</span> <span>A (89)</span></div>
-                    <div style={{display: 'flex', justifyContent: 'space-between'}}><span>Communication</span> <span>A- (82)</span></div>
-                  </div>
-                </div>
-
-                <div className="semester-card" style={{background: 'rgba(0,0,0,0.2)', padding: '15px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)'}}>
-                  <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '10px', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '10px'}}>
-                    <h4 style={{margin: 0, color: '#818cf8'}}>Semester 1</h4>
-                    <span style={{color: '#34d399', fontWeight: 'bold'}}>SGPA: 8.50 (80%)</span>
-                  </div>
-                  <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '0.9rem', color: '#cbd5e1'}}>
-                    <div style={{display: 'flex', justifyContent: 'space-between'}}><span>Calculus I</span> <span>A- (81)</span></div>
-                    <div style={{display: 'flex', justifyContent: 'space-between'}}><span>Physics I</span> <span>B+ (76)</span></div>
-                    <div style={{display: 'flex', justifyContent: 'space-between'}}><span>Intro to CS</span> <span>A (88)</span></div>
-                    <div style={{display: 'flex', justifyContent: 'space-between'}}><span>Engineering Draw</span> <span>A- (80)</span></div>
-                  </div>
-                </div>
-
+                ))}
               </div>
               
               <button className="modal-primary-btn" onClick={handleDownloadTranscript} style={{marginTop: '20px'}}>
