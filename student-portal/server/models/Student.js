@@ -9,6 +9,9 @@ const studentSchema = new mongoose.Schema({
   degree: { type: String },
   graduationYear: { type: String },
   major: { type: String, default: 'General' },
+  semester: { type: String, default: '1' },
+  enrollmentNo: { type: String },
+  rollNo: { type: String },
   password: { type: String, required: true },
   enrollmentDate: { type: Date, default: Date.now }
 }, {

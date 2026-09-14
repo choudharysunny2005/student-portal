@@ -31,14 +31,16 @@ function Signup() {
     
     try {
       const payload = {
-        name: `${formData.firstName} ${formData.lastName}`,
+        name: `${formData.firstName} ${formData.lastName}`.trim(),
         email: formData.email,
         phone: formData.phone,
-        dob: '', // Or add it to state if needed
-        university: 'University', // Default or add to state
+        dob: '',
+        university: 'University',
         degree: formData.course,
-        graduationYear: '', 
+        graduationYear: `${new Date().getFullYear() + 4}`,
         major: formData.course,
+        semester: formData.semester,
+        enrollmentNo: formData.enrollmentNo,
         password: formData.password
       };
 
@@ -56,10 +58,12 @@ function Signup() {
 
       toast.success('Registration Successful! Welcome to the portal.', { id: toastId });
       
-      // Save user to local storage if needed
-      localStorage.setItem('user', JSON.stringify(data.student));
+      // Save user to local storage
+      if (data.student) {
+        localStorage.setItem('user', JSON.stringify(data.student));
+      }
       
-      window.open(window.location.origin + '/dashboard', '_blank');
+      navigate('/dashboard');
     } catch (error) {
       toast.error(error.message, { id: toastId });
     } finally {

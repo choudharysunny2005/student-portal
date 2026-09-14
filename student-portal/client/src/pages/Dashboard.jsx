@@ -12,6 +12,20 @@ function Dashboard() {
   const [date, setDate] = useState(new Date());
   const [greeting, setGreeting] = useState('');
 
+  // Retrieve logged-in student or fallback
+  const storedUser = (() => {
+    try {
+      return JSON.parse(localStorage.getItem('user')) || {};
+    } catch {
+      return {};
+    }
+  })();
+
+  const studentName = storedUser.name || 'John';
+  const firstName = studentName.split(' ')[0];
+  const studentCourse = storedUser.major || storedUser.degree || 'B.Tech Computer Science';
+  const studentSemester = storedUser.semester || '4';
+
   useEffect(() => {
     const hour = new Date().getHours();
     if (hour < 12) setGreeting('Good Morning');
@@ -107,11 +121,12 @@ function Dashboard() {
 
   const handleDownloadTranscript = () => {
     const toastId = toast.loading('Generating official transcript...');
+    const enrollment = storedUser.enrollmentNo || 'ENR-9845321';
     setTimeout(() => {
       toast.success('Transcript downloaded successfully!', { id: toastId });
       triggerDownload(
-        'Official_Transcript_John_Doe.txt', 
-        'OFFICIAL TRANSCRIPT\nName: John Doe\nEnrollment: ENR-9845321\nCourse: B.Tech Computer Science\n\nCumulative CGPA: 8.74\nOverall Percentage: 83.5%\n\n-- Semester 3 --\nData Structures: A+ (92)\nDiscrete Math: A (88)\nLogic Design: B+ (78)\nWeb Dev: A (86)\nSGPA: 8.90\n\n-- Semester 2 --\nCalculus II: A (87)\nPhysics II: B+ (79)\nOOP (C++): A (89)\nCommunication: A- (82)\nSGPA: 8.65\n\n-- Semester 1 --\nCalculus I: A- (81)\nPhysics I: B+ (76)\nIntro to CS: A (88)\nEngineering Draw: A- (80)\nSGPA: 8.50'
+        `Official_Transcript_${studentName.replace(/\s+/g, '_')}.txt`, 
+        `OFFICIAL TRANSCRIPT\nName: ${studentName}\nEnrollment: ${enrollment}\nCourse: ${studentCourse}\n\nCumulative CGPA: 8.74\nOverall Percentage: 83.5%\n\n-- Semester 3 --\nData Structures: A+ (92)\nDiscrete Math: A (88)\nLogic Design: B+ (78)\nWeb Dev: A (86)\nSGPA: 8.90\n\n-- Semester 2 --\nCalculus II: A (87)\nPhysics II: B+ (79)\nOOP (C++): A (89)\nCommunication: A- (82)\nSGPA: 8.65\n\n-- Semester 1 --\nCalculus I: A- (81)\nPhysics I: B+ (76)\nIntro to CS: A (88)\nEngineering Draw: A- (80)\nSGPA: 8.50`
       );
     }, 1500);
   };
@@ -127,8 +142,8 @@ function Dashboard() {
   return (
     <div className="dashboard-container">
       <div className="dashboard-header">
-        <h2>{greeting}, John! 👋</h2>
-        <p>B.Tech Computer Science | Semester 4</p>
+        <h2>{greeting}, {firstName}! 👋</h2>
+        <p>{studentCourse} | Semester {studentSemester}</p>
       </div>
 
       {/* Top Stat Cards */}

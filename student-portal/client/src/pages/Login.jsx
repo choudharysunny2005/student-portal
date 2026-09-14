@@ -33,10 +33,12 @@ function Login() {
 
       toast.success('Login Successful!', { id: toastId });
       
-      // Save user to local storage if needed
-      localStorage.setItem('user', JSON.stringify(data.student));
+      // Save user to local storage
+      if (data.student) {
+        localStorage.setItem('user', JSON.stringify(data.student));
+      }
       
-      window.open(window.location.origin + '/dashboard', '_blank');
+      navigate('/dashboard');
       setFormData({ email: '', password: '' });
     } catch (error) {
       toast.error(error.message, { id: toastId });

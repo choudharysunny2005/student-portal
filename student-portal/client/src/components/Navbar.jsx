@@ -21,12 +21,20 @@ function Navbar() {
   const isAuthRoute = location.pathname === '/' || location.pathname === '/login' || location.pathname === '/signup';
   const isLoggedIn = !isAuthRoute;
 
-  // Mock Student Details
+  // Retrieve logged-in student or fallback
+  const storedUser = (() => {
+    try {
+      return JSON.parse(localStorage.getItem('user')) || {};
+    } catch {
+      return {};
+    }
+  })();
+
   const student = {
-    name: "John Doe",
-    rollNo: "CS2026-045",
-    enrollmentNo: "ENR9845321",
-    course: "B.Tech Computer Science"
+    name: storedUser.name || "John Doe",
+    rollNo: storedUser.rollNo || "CS2026-045",
+    enrollmentNo: storedUser.enrollmentNo || "ENR9845321",
+    course: storedUser.major || storedUser.degree || "B.Tech Computer Science"
   };
 
   const handleSearch = (e) => {
@@ -154,7 +162,7 @@ function Navbar() {
 
           <div className="nav-profile">
             <div className="avatar-wrapper" onClick={() => setIsDropdownOpen(!isDropdownOpen)}>
-              <img src="https://ui-avatars.com/api/?name=John+Doe&background=6366f1&color=fff&rounded=true" alt="User Profile" className="profile-avatar" />
+              <img src={`https://ui-avatars.com/api/?name=${encodeURIComponent(student.name)}&background=6366f1&color=fff&rounded=true`} alt="User Profile" className="profile-avatar" />
               <div className="status-dot"></div>
             </div>
             
@@ -177,7 +185,9 @@ function Navbar() {
                 <div className="dropdown-footer">
                   <button onClick={() => {
                     setIsDropdownOpen(false);
-                    window.location.href = '/login';
+                    localStorage.removeItem('user');
+                    toast.success('Logged out successfully');
+                    navigate('/login');
                   }}>
                     <LogOut size={16} /> Logout
                   </button>
