@@ -3,7 +3,11 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "install": "cd student-portal/client && npm install",
+    "start": "cd student-portal/server && node server.js",
+    "dev:server": "cd student-portal/server && npm run dev",
+    "dev:client": "cd student-portal/client && npm run dev",
+    "dev": "npm run build && npm start",
+    "install:all": "cd student-portal/server && npm install && cd ../client && npm install",
     "build": "cd student-portal/client && npm run build"
   }
 }
