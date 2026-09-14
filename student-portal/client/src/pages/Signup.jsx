@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import { API_BASE_URL } from '../config';
 
 function Signup() {
   const [step, setStep] = useState(1);
@@ -44,7 +45,7 @@ function Signup() {
         password: formData.password
       };
 
-      const response = await fetch('http://localhost:5000/api/students/signup', {
+      const response = await fetch(`${API_BASE_URL}/api/students/signup`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)

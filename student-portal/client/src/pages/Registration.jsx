@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { API_BASE_URL } from '../config';
 
 function Registration() {
   const [formData, setFormData] = useState({
@@ -12,7 +13,7 @@ function Registration() {
   // Fetch students from the backend
   const fetchStudents = async () => {
     try {
-      const res = await fetch('http://localhost:5000/api/students');
+      const res = await fetch(`${API_BASE_URL}/api/students`);
       if (res.ok) {
         const data = await res.json();
         setStudents(data);
@@ -36,7 +37,7 @@ function Registration() {
     setMessage({ text: '', type: '' });
 
     try {
-      const res = await fetch('http://localhost:5000/api/students/signup', {
+      const res = await fetch(`${API_BASE_URL}/api/students/signup`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

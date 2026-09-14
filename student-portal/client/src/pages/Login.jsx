@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { Shield, ArrowRight, User } from 'lucide-react';
+import { API_BASE_URL } from '../config';
 
 function Login() {
   const [formData, setFormData] = useState({ email: '', password: '' });
@@ -19,7 +20,7 @@ function Login() {
     const toastId = toast.loading('Authenticating credentials...');
     
     try {
-      const response = await fetch('http://localhost:5000/api/students/login', {
+      const response = await fetch(`${API_BASE_URL}/api/students/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)
