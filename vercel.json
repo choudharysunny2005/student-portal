@@ -1,0 +1,10 @@
+{
+  "buildCommand": "cd student-portal/client && npm run build",
+  "outputDirectory": "student-portal/client/dist",
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
