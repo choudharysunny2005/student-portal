@@ -111,9 +111,9 @@ export function getPersonalizedStudentProfile(storedUser) {
     (attendanceData.reduce((acc, curr) => acc + curr.attendance, 0) / attendanceData.length).toFixed(1)
   );
 
-  // 3. Dynamic Unique Pending Fees
-  // Some students have $0, others have unique amounts ($450, $850, $1,200, $1,500)
-  const feeOptions = [0, 450, 750, 1150, 1400, 0, 950];
+  // 3. Dynamic Unique Pending Fees in INR (₹)
+  // Some students have ₹0, others have unique amounts (₹25,000, ₹42,000, ₹65,000, ₹80,000)
+  const feeOptions = [0, 35000, 52000, 75000, 90000, 0, 44000];
   const pendingFees = feeOptions[seed % feeOptions.length];
 
   // 4. Dynamic Library Books

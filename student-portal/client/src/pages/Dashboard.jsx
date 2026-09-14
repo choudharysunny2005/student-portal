@@ -70,9 +70,9 @@ function Dashboard() {
   };
 
   const handlePayFees = () => {
-    const toastId = toast.loading('Processing payment securely...');
+    const toastId = toast.loading('Processing payment securely via UPI / NetBanking...');
     setTimeout(() => {
-      toast.success(`Payment of $${pendingFees.toLocaleString()} successful!`, { id: toastId });
+      toast.success(`Payment of ₹${pendingFees.toLocaleString('en-IN')} successful!`, { id: toastId });
       setPendingFees(0);
       localStorage.setItem(`fees_${profile.email}`, '0');
       setActiveModal(null);
@@ -163,7 +163,7 @@ function Dashboard() {
           <div className="stat-icon red"><CreditCard size={24} /></div>
           <div className="stat-info">
             <p>Pending Fees</p>
-            <h3>${pendingFees.toLocaleString()}</h3>
+            <h3>₹{pendingFees.toLocaleString('en-IN')}</h3>
           </div>
         </div>
         <div className="stat-card clickable" onClick={() => setActiveModal('library')} style={{cursor: 'pointer'}}>
@@ -379,20 +379,20 @@ function Dashboard() {
               {pendingFees > 0 ? (
                 <>
                   <div className="fee-breakdown">
-                    <div className="fee-row"><span>Tuition Fee (Sem {profile.semester})</span> <span>${Math.round(pendingFees * 0.8).toLocaleString()}</span></div>
-                    <div className="fee-row"><span>Lab & Resource Charges</span> <span>${Math.round(pendingFees * 0.15).toLocaleString()}</span></div>
-                    <div className="fee-row"><span>Library Fine / Processing</span> <span>${Math.round(pendingFees * 0.05).toLocaleString()}</span></div>
-                    <div className="fee-row total"><span>Total Pending Balance</span> <span>${pendingFees.toLocaleString()}</span></div>
+                    <div className="fee-row"><span>Tuition Fee (Sem {profile.semester})</span> <span>₹{Math.round(pendingFees * 0.8).toLocaleString('en-IN')}</span></div>
+                    <div className="fee-row"><span>Lab & Resource Charges</span> <span>₹{Math.round(pendingFees * 0.15).toLocaleString('en-IN')}</span></div>
+                    <div className="fee-row"><span>Library Fine / Processing</span> <span>₹{Math.round(pendingFees * 0.05).toLocaleString('en-IN')}</span></div>
+                    <div className="fee-row total"><span>Total Pending Balance</span> <span>₹{pendingFees.toLocaleString('en-IN')}</span></div>
                   </div>
                   <button className="modal-primary-btn" onClick={handlePayFees}>
-                    <CreditCard size={18} /> Pay via Credit/Debit Card
+                    <CreditCard size={18} /> Pay via UPI / NetBanking / Cards (₹{pendingFees.toLocaleString('en-IN')})
                   </button>
                 </>
               ) : (
                 <div style={{textAlign: 'center', padding: '30px 0'}}>
                   <CheckCircle2 size={48} color="#34d399" style={{marginBottom: '15px'}} />
                   <h3 style={{color: '#e2e8f0', margin: 0}}>All Fees Cleared!</h3>
-                  <p style={{color: '#94a3b8', marginTop: '10px'}}>You have $0 balance for Semester {profile.semester}.</p>
+                  <p style={{color: '#94a3b8', marginTop: '10px'}}>You have ₹0 pending balance for Semester {profile.semester}.</p>
                 </div>
               )}
             </div>
