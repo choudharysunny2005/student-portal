@@ -22,7 +22,7 @@ function CreditPopup() {
         <div className="credit-content">
           <span className="sparkle">✨</span>
           <h3>Welcome!</h3>
-          <p>This website is proudly made by <br/><strong>Kamlesh</strong> & <strong>Sunny Choudhary</strong></p>
+          <p>This website is proudly made by <br/><strong>Sunny Choudhary</strong></p>
           <button className="credit-ok-btn" onClick={() => setIsVisible(false)}>Awesome!</button>
         </div>
       </div>

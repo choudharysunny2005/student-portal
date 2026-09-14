@@ -102,4 +102,4 @@ npm run dev
 
 ## 👥 Credits
 
-Developed by **Kamlesh** & **Sunny Choudhary**.
+Developed by **Sunny Choudhary**.
