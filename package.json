@@ -1,0 +1,9 @@
+{
+  "name": "student-portal-workspace",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "install": "cd student-portal/client && npm install",
+    "build": "cd student-portal/client && npm run build"
+  }
+}

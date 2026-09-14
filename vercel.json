@@ -1,4 +1,5 @@
 {
+  "installCommand": "cd student-portal/client && npm install",
   "buildCommand": "cd student-portal/client && npm run build",
   "outputDirectory": "student-portal/client/dist",
   "rewrites": [

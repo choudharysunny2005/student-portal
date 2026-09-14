@@ -1,3 +1,4 @@
+
 # 🎓 Student Portal
 
 A modern, full-stack student management portal built with **React**, **Vite**, **Express**, and **MongoDB**. Features include authentication, course schedules, dynamic calendar, lecture notes download, live GPS/camera attendance verification, grade tracking, fee payments, and library book management.
@@ -102,4 +103,4 @@ npm run dev
 
 ## 👥 Credits
 
-Developed by **Sunny Choudhary**.
+Developed by **Kamlesh** & **Sunny Choudhary**.
